@@ -38,7 +38,6 @@ def load_data(infile):
         raise ValueError("File is the wrong format")
 
 
-
 def calculate_cai(dna,index=SharpEcoliIndex):
     cai = CodonAdaptationIndex()
     cai.set_cai_index(index)
@@ -140,7 +139,13 @@ if __name__=="__main__":
         c = 0
         for i in list(fasta.keys()):
             c+=1
-            orf = i
+            orf_base = i.split(",")
+            ind = 0
+            for j in range(len(orf_base)):
+                if orf_base[j].startswith("\""):
+                    d = j-1
+                    break
+            orf = orf_base[d]
             cai = calculate_cai(fasta[i])
             cksm = checksum(fasta[i])
             hydr = hidrophobicity(fasta[i])
@@ -155,6 +160,3 @@ if __name__=="__main__":
                 print(f"Processed {c} reads")
     csv.close()
     print("Done")
-
-
-
