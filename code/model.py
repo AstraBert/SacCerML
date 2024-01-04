@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from Bio.SeqUtils.CheckSum import crc32
 from Bio.SeqUtils.CodonUsage import CodonAdaptationIndex
@@ -207,9 +207,9 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 print("Generated training and test data")
 
 print("Building and training the model...")
-# Create and train the Random Forest classifier
-model = RandomForestClassifier(n_estimators=25, n_jobs=-1,random_state=42)
-model = model.fit(X, y)  # Uncomment this line if clf needs training
+# Create and train the Decision Tree classifier
+model = DecisionTreeClassifier()
+model = model.fit(X, y)  
 print("Built and trained the model... Now predicting")
 
 def predict_genes(infile, model=model):
