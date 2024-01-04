@@ -12,6 +12,8 @@ import gzip
 from math import floor
 from sklearn.metrics import accuracy_score
 from argparse import ArgumentParser
+from orfipy_core import orfs
+import sys
 
 argparse = ArgumentParser()
 argparse.add_argument("-s", "--enable_model_saving", help="Save the model to load it in future; keep in mind that the model can take up to 11 GB of disk space!", action="store_true", default=False, required=False)
@@ -135,29 +137,57 @@ def mol_ext(dna):
     molar_ext = ProteinAnalysis(protein_sequence).molar_extinction_coefficient()
     return ",".join([str(s) for s in molar_ext])
 
+
+def longest_orf(coding):
+    keys_M_starting = [key for key in list(coding.keys()) if str(Seq(coding[key]).translate()).startswith("M")]
+    M_starting = [seq for seq in list(coding.values()) if str(Seq(seq).translate()).startswith("M")]
+    lengths = [len(seq) for seq in M_starting]
+    max_ind = lengths.index(max(lengths))
+    return {keys_M_starting[max_ind]: M_starting[max_ind]}
+
+
+def predict_orf(seq,minlen=45,maxlen=18000,longest_M_starting_orf_only=True):
+    ls = orfs(seq,minlen=minlen,maxlen=maxlen)
+    coding = {}
+    count = 0
+    for start,stop,strand,description in ls:
+        count+=1
+        coding.update({f"ORF.{count}": seq[int(start):int(stop)]})
+    if longest_M_starting_orf_only:
+        print("\n---------------------------\nWarning: option longest_M_starting_orf_only is set to True and thus you will get only the longest M-starting ORF; to get all the ORFs, set it to False\n---------------------------\n", file=sys.stderr)
+        return longest_orf(coding)
+    return coding
+
 def process_dna(fasta_file):
     fas = load_data(fasta_file)
     seqs = [seq for seq in list(fas.values())]
     heads = [seq for seq in list(fas.keys())]
-    data = []
-    for seq in seqs:
-        cai = calculate_cai(seq)
-        cksm = checksum(seq)
-        hydr = hidrophobicity(seq)
-        isl = isoelectric_pt(seq)
-        arm = aromatic(seq)
-        inst = instable(seq)
-        mw = weight(seq)
-        se_st = sec_struct(seq).split(",")
-        se_st1 = se_st[0]
-        se_st2 = se_st[1]
-        se_st3 = se_st[2]
-        me = mol_ext(seq).split(",")
-        me1 = me[0]
-        me2 = me[1]
-        n = pd.DataFrame({"CAI": [cai], "CHECKSUM": [cksm], "HIDROPHOBICITY": [hydr], "ISOELECTRIC": [isl],"AROMATIC": [arm],"INSTABLE": [inst], "MW": [mw], "HELIX": [se_st1], "TURN": [se_st2], "SHEET": [se_st3],"MOL_EXT_RED": [me1], "MOL_EXT_OX": [me2]})
-        data.append(n)
-    return data, heads
+    data = {}
+    proteins = {}
+    for i in range(len(seqs)):
+        coding = predict_orf(seqs[i])
+        open_reading_frames = list(coding.keys())
+        for key in open_reading_frames:
+            head = f"{heads[i]}.{key}"
+            proteins.update({head: str(Seq(coding[key]).translate())})
+            cai = calculate_cai(coding[key])
+            cksm = checksum(coding[key])
+            hydr = hidrophobicity(coding[key])
+            isl = isoelectric_pt(coding[key])
+            arm = aromatic(coding[key])
+            inst = instable(coding[key])
+            mw = weight(coding[key])
+            se_st = sec_struct(coding[key]).split(",")
+            se_st1 = se_st[0]
+            se_st2 = se_st[1]
+            se_st3 = se_st[2]
+            me = mol_ext(coding[key]).split(",")
+            me1 = me[0]
+            me2 = me[1]
+            n = pd.DataFrame({"CAI": [cai], "CHECKSUM": [cksm], "HIDROPHOBICITY": [hydr], "ISOELECTRIC": [isl],"AROMATIC": [arm],"INSTABLE": [inst], "MW": [mw], "HELIX": [se_st1], "TURN": [se_st2], "SHEET": [se_st3],"MOL_EXT_RED": [me1], "MOL_EXT_OX": [me2]})
+            data.update({head: n})
+    return data, proteins
+
 
 print("Loading data...")
 # Load the data from the CSV file
@@ -165,30 +195,32 @@ data = pd.read_csv('scerevisiae.csv')
 print("Loaded data")
 
 print("Generating training and test data...")
-# Features (replace with the actual feature columns in your CSV)
+# Features
 X = data.iloc[:, 1:]
 
-# Labels (replace with the actual label column in your CSV)
-y = data['GENE_NAME']
+# Labels
+y = data['ORF_TYPE']
+
 
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 print("Generated training and test data")
 
 print("Building and training the model...")
-# Create and train the Decision Tree classifier (use the same model you trained before)
+# Create and train the Random Forest classifier
 model = RandomForestClassifier(n_estimators=25, n_jobs=-1,random_state=42)
 model = model.fit(X, y)  # Uncomment this line if clf needs training
 print("Built and trained the model... Now predicting")
 
 def predict_genes(infile, model=model):
-    X, headers = process_dna(infile)
+    X, proteins = process_dna(infile)
+    headers = list(X.keys())
     predictions = []
-    for x in X:
+    for x in list(X.values()):
       p = model.predict(x)
       predictions.append(p)
     for i in range(len(predictions)):
-        print(f"{headers[i]} is predicted as {predictions[i][0]}")
+        print(f"{headers[i]} protein sequence is\n{proteins[headers[i]]}\nand is predicted as {predictions[i][0]}\n")
 
 # Make predictions on the test set
 y_pred = model.predict(X_test)
