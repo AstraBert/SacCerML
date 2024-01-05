@@ -152,20 +152,23 @@ def predict_orf(seq,minlen=45,maxlen=18000,longest_M_starting_orf_only=True):
     count = 0
     for start,stop,strand,description in ls:
         count+=1
-        coding.update({f"ORF.{count}": seq[int(start):int(stop)]})
+        if start < stop:
+            coding.update({f"ORF.{count}": seq[int(start):int(stop)]})
+        else:
+            coding.update({f"ORF.{count}": str(Seq(seq[int(stop):int(start)]).reverse_complement())})
     if longest_M_starting_orf_only:
-        print("\n---------------------------\nWarning: option longest_M_starting_orf_only is set to True and thus you will get only the longest M-starting ORF; to get all the ORFs, set it to False\n---------------------------\n", file=sys.stderr)
+        warnings.warn("\n---------------------------\nWarning: option longest_M_starting_orf_only is set to True and thus you will get only the longest M-starting ORF; to get all the ORFs, set it to False\n---------------------------\n")
         return longest_orf(coding)
     return coding
 
-def process_dna(fasta_file):
+def process_dna(fasta_file, longest_M_starting_orf_only):
     fas = load_data(fasta_file)
     seqs = [seq for seq in list(fas.values())]
     heads = [seq for seq in list(fas.keys())]
     data = {}
     proteins = {}
     for i in range(len(seqs)):
-        coding = predict_orf(seqs[i])
+        coding = predict_orf(seqs[i],longest_M_starting_orf_only=longest_M_starting_orf_only)
         open_reading_frames = list(coding.keys())
         for key in open_reading_frames:
             head = f"{heads[i]}.{key}"
@@ -187,6 +190,7 @@ def process_dna(fasta_file):
             n = pd.DataFrame({"CAI": [cai], "CHECKSUM": [cksm], "HIDROPHOBICITY": [hydr], "ISOELECTRIC": [isl],"AROMATIC": [arm],"INSTABLE": [inst], "MW": [mw], "HELIX": [se_st1], "TURN": [se_st2], "SHEET": [se_st3],"MOL_EXT_RED": [me1], "MOL_EXT_OX": [me2]})
             data.update({head: n})
     return data, proteins
+
 
 
 print("Loading data...")
@@ -212,8 +216,8 @@ model = DecisionTreeClassifier()
 model = model.fit(X, y)  
 print("Built and trained the model... Now predicting")
 
-def predict_genes(infile, model=model):
-    X, proteins = process_dna(infile)
+def predict_genes(infile, longest_M_starting_orf_only, model=model):
+    X, proteins = process_dna(infile,longest_M_starting_orf_only)
     headers = list(X.keys())
     predictions = []
     for x in list(X.values()):
