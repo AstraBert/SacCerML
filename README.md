@@ -31,8 +31,8 @@ This Python script combines bioinformatics tools and machine learning to predict
 ### Discussion/Conclusion
 The script demonstrates an integrated approach to gene prediction, combining ORF analysis with machine learning. It achieves accurate gene type predictions based on a set of genomic features. Considerations for the `longest_M_starting_orf_only` parameter are noted, providing flexibility in the analysis. The option to save the trained model facilitates future use and sharing.
 
+### Model representation (demonstration purposes only)
 
-
-FULL DOCUMENTATION IS BEING BUILT... For now, use [the notebook](./notebook/SacCerML.ipynb) to play around with things;
+![SacCerML](./data/SacCerML.png)
 
 See it on Google Colab [here](https://colab.research.google.com/drive/107045cvJIsOS30DV3DBoW5PHv6DsdM2F?usp=sharing)
