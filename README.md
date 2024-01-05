@@ -10,7 +10,7 @@ This Python script combines bioinformatics tools and machine learning to predict
 - **Data Processing:** Load genomic sequences from a FASTA file, predict ORFs, and extract various features, including Codon Adaptation Index (CAI), checksum, hydrophobicity, isoelectric point, aromaticity, instability index, molecular weight, secondary structure, and molar extinction coefficients.
 - **Model Training and Prediction:** Train a Decision Tree classifier on a labeled dataset (`scerevisiae.csv`) containing features and ORF types. Evaluate the model's accuracy on a test set and optionally save the trained model for future use.
 
-## Methods
+### Methods
 1. **Data Loading and Preprocessing:**
    - Read genomic sequences from a FASTA file, predict ORFs, and extract features.
    - Prepare a labeled dataset (`scerevisiae.csv`) for training and testing.
